@@ -1,0 +1,17 @@
+data:
+  radius: 5.0
+  k_neighbors: 32
+  dt: 0.001
+
+model:
+  hidden_dim: 32
+  num_layers: 2
+  dropout: 0.1
+
+training:
+  batch_size: 1
+  lr: 1e-3
+  epochs: 200
+
+system:
+  num_classes: 3
