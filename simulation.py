@@ -65,8 +65,6 @@ def K_scalar(z, Dij, Rj):
 #         z    = xi - x_j
 #         out[idx] = K_scalar(z, Dij, Rj).sum() / den
 
-#     # z = x_i[:, None] - x_j[None, :]  # (Ni, Nj)
-#     # out = K_scalar(z, Dij, Rj).sum(axis=1) / den
 #     return out
 @njit
 def drift_ij_numba(x_i, x_j, Dij, Rj, exclude_self):

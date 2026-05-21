@@ -1,8 +1,9 @@
 import os
 import numpy as np
-
+import re
 import torch
 from torch.utils.data import Dataset
+from utils.io import load_simulation_raw
 
 
 class SimulationDataset(Dataset):
@@ -54,53 +55,22 @@ class SimulationDataset(Dataset):
     # ---------------------------------------------------------
     # LOAD SIMULATIONS
     # ---------------------------------------------------------
-
     def _load_simulations(self):
-
-        worker_files = sorted([
-            f for f in os.listdir(self.data_dir)
-            if "workers" in f
-        ])
-
-        manager_files = sorted([
-            f for f in os.listdir(self.data_dir)
-            if "managers" in f
-        ])
-
-        ceo_files = sorted([
-            f for f in os.listdir(self.data_dir)
-            if "ceos" in f
-        ])
-
-        assert len(worker_files) == len(manager_files) == len(ceo_files)
-
-        for wf, mf, cf in zip(
-            worker_files,
-            manager_files,
-            ceo_files,
-        ):
-
-            workers = np.load(
-                os.path.join(self.data_dir, wf)
-            )
-
-            managers = np.load(
-                os.path.join(self.data_dir, mf)
-            )
-
-            ceos = np.load(
-                os.path.join(self.data_dir, cf)
-            )
-
-            sim = {
-
-                "workers": workers,
-                "managers": managers,
-                "ceos": ceos,
-            }
-
-            self.simulations.append(sim)
-
+        # Discover unique seeds numerically
+        seeds = []
+        for f in os.listdir(self.data_dir):
+            if f.startswith("opinion_workers_mpi_") and f.endswith(".npy"):
+                match = re.search(r'opinion_workers_mpi_(\d+)\.npy$', f)
+                if match:
+                    seeds.append(int(match.group(1)))
+        seeds = sorted(seeds)
+        for seed in seeds:
+            w, m, c = load_simulation_raw(self.data_dir, seed)
+            self.simulations.append({
+                "workers": w,
+                "managers": m,
+                "ceos": c
+            })
     # ---------------------------------------------------------
     # BUILD SAMPLE INDEX
     # ---------------------------------------------------------
