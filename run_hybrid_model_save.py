@@ -1,6 +1,11 @@
-# run_hybrid_model.py
+# run_hybrid_model_save.py
+# Same pipeline as run_hybrid_model.py; additionally persists fitted RF, scaler, and
+# threshold multipliers under weights/<YYYY-MM-DD>/<HH-MM-SS>/ for inference.
 import sys
 import os
+import json
+from datetime import datetime
+
 project_root = os.path.abspath(os.path.dirname(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
@@ -10,6 +15,7 @@ from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import classification_report, f1_score, balanced_accuracy_score
@@ -77,12 +83,50 @@ def optimize_thresholds(probs, y_true):
     print(f"  Best Validation Macro F1: {best_score:.4f}")
     return best_multipliers
 
+def save_inference_artifacts(out_dir, clf, scaler, multipliers, train_seeds, val_seeds, test_seeds):
+    """Persist hybrid RF, scaler, and class multipliers for reload + inference."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    joblib.dump(clf, out_dir / "hybrid_rf.joblib")
+    joblib.dump(scaler, out_dir / "hybrid_robust_scaler.joblib")
+    np.save(out_dir / "hybrid_class_multipliers.npy", multipliers)
+
+    import sklearn
+    meta = {
+        "class_names": CLASS_NAMES,
+        "n_features_in": int(clf.n_features_in_),
+        "train_seeds": train_seeds,
+        "val_seeds": val_seeds,
+        "test_seeds": test_seeds,
+        "sklearn_version": sklearn.__version__,
+        "random_forest": {
+            "n_estimators": int(clf.n_estimators),
+            "max_depth": clf.max_depth,
+            "class_weight": clf.class_weight,
+            "random_state": clf.random_state,
+        },
+    }
+    with open(out_dir / "manifest.json", "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2)
+
+    print(f"\nSaved inference artifacts to: {out_dir}")
+    print("  - hybrid_rf.joblib")
+    print("  - hybrid_robust_scaler.joblib")
+    print("  - hybrid_class_multipliers.npy")
+    print("  - manifest.json")
+
 def main():
     train_seeds = list(cfg.vec.TRAIN_SEEDS)
     val_seeds = list(cfg.vec.VAL_SEEDS)
     test_seeds = list(cfg.vec.TEST_SEEDS)
     
     cache_dir = "data/cache"
+
+    now = datetime.now()
+    date_part = now.strftime("%Y-%m-%d")
+    time_part = now.strftime("%H-%M-%S")
+    weights_run_dir = Path(project_root) / "weights" / date_part / time_part
     
     print("==========================================")
     print("Loading datasets for HYBRID physical-kinematic model...")
@@ -131,6 +175,10 @@ def main():
     test_probs = clf.predict_proba(X_test_scaled)
     test_preds_opt = np.argmax(test_probs * multipliers, axis=1)
     print(classification_report(y_test, test_preds_opt, target_names=CLASS_NAMES, digits=4))
+
+    save_inference_artifacts(
+        weights_run_dir, clf, scaler, multipliers, train_seeds, val_seeds, test_seeds
+    )
     
     # Compute metrics for comparison
     bal_acc_default = balanced_accuracy_score(y_test, test_preds_default)
@@ -195,26 +243,6 @@ def main():
     plt.savefig(plot_path, dpi=200)
     print(f"\nSaved scientific comparison plot to: {plot_path}")
     plt.close()
-
-    # Save the trained model, scaler, and optimal multipliers for future inference
-    import joblib
-    model_save_dir = os.path.join(project_root, "models", "saved")
-    os.makedirs(model_save_dir, exist_ok=True)
-    
-    model_path = os.path.join(model_save_dir, "hybrid_rf_model.joblib")
-    scaler_path = os.path.join(model_save_dir, "robust_scaler.joblib")
-    multipliers_path = os.path.join(model_save_dir, "optimal_multipliers.npy")
-    
-    joblib.dump(clf, model_path)
-    joblib.dump(scaler, scaler_path)
-    np.save(multipliers_path, multipliers)
-    
-    print("\n" + "="*95)
-    print("Model artifacts saved successfully for inference:")
-    print(f"  Classifier: {model_path}")
-    print(f"  Scaler:     {scaler_path}")
-    print(f"  Thresholds: {multipliers_path}")
-    print("="*95)
 
 if __name__ == "__main__":
     main()

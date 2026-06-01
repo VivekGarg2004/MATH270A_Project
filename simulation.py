@@ -11,7 +11,7 @@ T          = 0.5
 DT         = 1e-3                 # keep reasonable for MPI run-time
 SIGMA      = 0.0                  # additive noise amplitude
 SAVE_EVERY = 1
-OUTDIR     = "data"
+OUTDIR     = "data_test"
 
 R1, R2, R3 = 1.0, 2.5, 5.0         # interaction radii (depend on source species j)
 D11, D12, D22, D23, D33 = 5.0, 10.0, 2.0,  5.0, 1   # influence matrix entries

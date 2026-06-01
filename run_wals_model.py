@@ -7,6 +7,7 @@ if project_root not in sys.path:
 
 import numpy as np
 from pathlib import Path
+from typing import Optional, Union
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -23,14 +24,22 @@ N1, N2, N3 = 16000, 4000, 200
 N_TOTAL = N1 + N2 + N3
 DATA_DIR = Path("data")
 
-def extract_baseline_rf_features_for_seed(seed, max_step=200):
+def extract_baseline_rf_features_for_seed(
+    seed,
+    max_step=200,
+    data_dir: Optional[Union[str, Path]] = None,
+):
     """
     Loads raw simulation data and extracts the trajectory statistical features
     used in the baseline Random Forest classifier.
+
+    data_dir defaults to DATA_DIR (typically ``data/``). Use e.g.
+    ``data_distribution/data`` for distribution-generated trajectories.
     """
-    w = np.load(DATA_DIR / f"opinion_workers_mpi_{seed}.npy").squeeze()[:max_step]
-    m = np.load(DATA_DIR / f"opinion_managers_mpi_{seed}.npy").squeeze()[:max_step]
-    c = np.load(DATA_DIR / f"opinion_ceos_mpi_{seed}.npy").squeeze()[:max_step]
+    root = Path(data_dir) if data_dir is not None else DATA_DIR
+    w = np.load(root / f"opinion_workers_mpi_{seed}.npy").squeeze()[:max_step]
+    m = np.load(root / f"opinion_managers_mpi_{seed}.npy").squeeze()[:max_step]
+    c = np.load(root / f"opinion_ceos_mpi_{seed}.npy").squeeze()[:max_step]
 
     def feats(o):
         v = np.diff(o, axis=0) / DT
@@ -61,11 +70,14 @@ def extract_baseline_rf_features_for_seed(seed, max_step=200):
     ], axis=1)
 
     X = np.concatenate([X_raw, ratio], axis=1)
-    y = np.concatenate([
-        np.zeros(N1, dtype=int),
-        np.ones(N2,  dtype=int),
-        2*np.ones(N3, dtype=int),
-    ])
+    n1, n2, n3 = w.shape[1], m.shape[1], c.shape[1]
+    y = np.concatenate(
+        [
+            np.zeros(n1, dtype=int),
+            np.ones(n2, dtype=int),
+            2 * np.ones(n3, dtype=int),
+        ]
+    )
     return X, y
 
 def load_baseline_dataset(seeds, max_step=200):

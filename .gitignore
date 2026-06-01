@@ -207,3 +207,16 @@ marimo/_lsp/
 __marimo__/
 
 /data/*
+
+# Distribution-sampled MPI trajectories (simulate_distribution.py → data_distribution/)
+/data_distribution/
+
+# Trained hybrid RF artifacts (run_hybrid_model_save.py)
+/weights/
+
+/data_distribution_trial2/
+
+*.zip
+*.tar
+*.tar.gz
+*.7z
