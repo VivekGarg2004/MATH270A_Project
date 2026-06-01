@@ -1,0 +1,8 @@
+numpy
+tqdm
+matplotlib
+scikit-learn
+joblib
+numba
+openmpi
+mpi4py

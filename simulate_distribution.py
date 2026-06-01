@@ -4,6 +4,8 @@
 # Run with MPI from project root, e.g.:
 #   mpirun -np 4 python simulate_distribution.py
 #
+# main(): TOTAL_RUNS seeds 0..N-1; t_sweep=seed/(N-1). Use BATCH_START/END for chunked runs.
+#
 # Outputs (relative to distribution root, default data_distribution/):
 #   data/       — opinion_workers/managers/ceos_mpi_<seed>.npy (trajectories, sampled cohort sizes)
 #   metadata/   — distribution_meta_mpi_<seed>.json, sampled_species_counts_mpi_<seed>.npy
@@ -13,11 +15,12 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+from tqdm import tqdm
 from mpi4py import MPI
 from numba import njit
 
 # --------------------- layout under distribution root -----------------------------------------
-DATA_DISTRIBUTION_DIR = "data_distribution"
+DATA_DISTRIBUTION_DIR = "data_distribution_trial2"
 DATA_SUBDIR = "data"
 METADATA_SUBDIR = "metadata"
 
@@ -331,10 +334,18 @@ def run_opinion_mpi_integration(
         frame = None
 
     sqrt_dt_sigma = SIGMA * np.sqrt(DT)
-    for t in range(1, steps + 1):
-        if rank == 0 and verbose:
-            print(f"[rank {rank}] step {t}/{steps}", flush=True)
+    step_range = range(1, steps + 1)
+    if rank == 0 and verbose:
+        step_iter = tqdm(
+            step_range,
+            total=steps,
+            desc=f"opinion integration seed={seed}",
+            unit="step",
+        )
+    else:
+        step_iter = step_range
 
+    for t in step_iter:
         dx1_loc = drift_ij_numba(x1[sl1], x1, D11, R1, True) + drift_ij_numba(
             x1[sl1], x2, D12, R2, False
         )
@@ -600,10 +611,23 @@ def run_single_distribution_generation(
 
 
 # --------------------- main -------------------------------------------------------------------
-def main() -> None:
-    SEEDS = list(range(3, 10))
+def _t_imbalance_for_interpolation(t_sweep: float) -> float:
+    """
+    Map sweep coordinate t_sweep in [0, 1] to the interpolation parameter t used in
+    p_interp = (1 - t) * P_EVEN + t * p_target.
 
-    T_IMBALANCE = 0.5
+    t_sweep=0 → target (default cohort proportions); t_sweep=1 → even (1/3 each).
+    """
+    return float(1.0 - np.clip(t_sweep, 0.0, 1.0))
+
+
+def main() -> None:
+    # Full sweep: seeds 0 .. TOTAL_RUNS-1, t_sweep = seed/(TOTAL_RUNS-1) on [0, 1].
+    # Run in batches by changing BATCH_START / BATCH_END (non-overlapping ranges).
+    TOTAL_RUNS = 100
+    BATCH_START, BATCH_END = 21, 51  # batch 1; then (30, 67), (67, 100)
+    SEEDS = list(range(BATCH_START, BATCH_END))
+
     CONCENTRATION = 50.0
     COUNTS_SEED = None
     TARGET_COUNTS = DEFAULT_TARGET_COUNTS.copy()
@@ -620,15 +644,22 @@ def main() -> None:
 
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
+    t_denom = max(TOTAL_RUNS - 1, 1)
     for seed in SEEDS:
+        t_sweep = float(seed) / t_denom
+        t_interp = _t_imbalance_for_interpolation(t_sweep)
         if VERBOSE and rank == 0:
             print(
-                f"\n{'='*60}\n[simulate_distribution] seed={seed}\n{'='*60}",
+                f"\n{'='*60}\n"
+                f"[simulate_distribution] run seed={seed}  "
+                f"t_sweep={t_sweep:.4f} (0=target, 1=even)  "
+                f"t_interp={t_interp:.4f}\n"
+                f"{'='*60}",
                 flush=True,
             )
         run_single_distribution_generation(
             seed,
-            t_imbalance=T_IMBALANCE,
+            t_imbalance=t_interp,
             concentration=CONCENTRATION,
             counts_seed=COUNTS_SEED,
             target_counts=TARGET_COUNTS,

@@ -39,7 +39,9 @@ def load_hybrid_dataset(seeds, data_dir="data", cache_dir="data/cache"):
         phys_feat, lbl = get_or_compute_features(data_dir, seed, cache_dir=cache_dir)
         
         # 2. Load kinematic baseline features (14 features)
-        kin_feat, _ = extract_baseline_rf_features_for_seed(seed, max_step=200)
+        kin_feat, _ = extract_baseline_rf_features_for_seed(
+            seed, max_step=200, data_dir=data_dir
+        )
         
         # 3. Create physical ratio features (each physical feature divided by its simulation median)
         # This provides scale-invariance to the physical coupling strengths
