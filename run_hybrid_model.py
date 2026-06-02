@@ -196,5 +196,25 @@ def main():
     print(f"\nSaved scientific comparison plot to: {plot_path}")
     plt.close()
 
+    # Save the trained model, scaler, and optimal multipliers for future inference
+    import joblib
+    model_save_dir = os.path.join(project_root, "models", "saved")
+    os.makedirs(model_save_dir, exist_ok=True)
+    
+    model_path = os.path.join(model_save_dir, "hybrid_rf_model.joblib")
+    scaler_path = os.path.join(model_save_dir, "robust_scaler.joblib")
+    multipliers_path = os.path.join(model_save_dir, "optimal_multipliers.npy")
+    
+    joblib.dump(clf, model_path)
+    joblib.dump(scaler, scaler_path)
+    np.save(multipliers_path, multipliers)
+    
+    print("\n" + "="*95)
+    print("Model artifacts saved successfully for inference:")
+    print(f"  Classifier: {model_path}")
+    print(f"  Scaler:     {scaler_path}")
+    print(f"  Thresholds: {multipliers_path}")
+    print("="*95)
+
 if __name__ == "__main__":
     main()

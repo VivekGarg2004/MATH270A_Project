@@ -1,0 +1,76 @@
+==========================================
+Loading datasets for HYBRID physical-kinematic model...
+==========================================
+Loading Hybrid Train Set...
+  Train shape: (1414000, 56)
+Loading Hybrid Validation Set...
+  Validation shape: (303000, 56)
+Loading Hybrid Test Set...
+  Test shape: (303000, 56)
+
+Training Hybrid XGBoost Classifier (Kinematic + Physical + Ratios)...
+
+--- Hybrid RF Test Evaluation (Default Thresholds) ---
+              precision    recall  f1-score   support
+
+      Worker     0.9942    0.9026    0.9462    240000
+     Manager     0.7197    0.9728    0.8273     60000
+         CEO     0.7426    0.9923    0.8495      3000
+
+    accuracy                         0.9174    303000
+   macro avg     0.8188    0.9559    0.8743    303000
+weighted avg     0.9374    0.9174    0.9217    303000
+
+
+Optimizing decision thresholds on validation set...
+  Optimal class multipliers found: Worker=1.0, Manager=0.40, CEO=0.50
+  Best Validation Macro F1: 0.8788
+
+--- Hybrid RF Test Evaluation (Optimized Thresholds) ---
+              precision    recall  f1-score   support
+
+      Worker     0.9894    0.9259    0.9566    240000
+     Manager     0.7683    0.9536    0.8510     60000
+         CEO     0.7583    0.9913    0.8593      3000
+
+    accuracy                         0.9321    303000
+   macro avg     0.8387    0.9570    0.8890    303000
+weighted avg     0.9433    0.9321    0.9347    303000
+
+
+==========================================
+Training Baseline RF (Trajectory Statistics)...
+==========================================
+Loading Baseline Train Set...
+Loading Baseline Test Set...
+
+--- Baseline RF Test Set Evaluation ---
+              precision    recall  f1-score   support
+
+      Worker     0.9667    0.8137    0.8836    240000
+     Manager     0.5468    0.8796    0.6744     60000
+         CEO     0.6466    0.9680    0.7753      3000
+
+    accuracy                         0.8282    303000
+   macro avg     0.7201    0.8871    0.7778    303000
+weighted avg     0.8804    0.8282    0.8411    303000
+
+
+===============================================================================================
+                               Final Scientific Comparison Table                               
+===============================================================================================
+Model                                    | Bal Acc  | Worker F1 | Manager F1 | CEO F1  
+-----------------------------------------------------------------------------------------------
+Baseline RF (Kinematic Stats Only)       | 0.8871  | 0.8836   | 0.6744    | 0.7753
+Hybrid RF (Default Thresholds)           | 0.9559  | 0.9462   | 0.8273    | 0.8495
+Hybrid RF + Optimized Thresholds (Ours)  | 0.9570  | 0.9566   | 0.8510    | 0.8593
+===============================================================================================
+
+Saved scientific comparison plot to: analysis/final_hybrid_vs_baseline_comparison.png
+
+===============================================================================================
+Model artifacts saved successfully for inference:
+  Classifier: /Users/vivekgarg/Documents/MATH270A/MATH270A_Project/models/saved/hybrid_rf_model.joblib
+  Scaler:     /Users/vivekgarg/Documents/MATH270A/MATH270A_Project/models/saved/robust_scaler.joblib
+  Thresholds: /Users/vivekgarg/Documents/MATH270A/MATH270A_Project/models/saved/optimal_multipliers.npy
+===============================================================================================
