@@ -20,7 +20,7 @@ from run_wals_model import extract_baseline_rf_features_for_seed
 
 CLASS_NAMES = ["Worker", "Manager", "CEO"]
 
-def load_hybrid_dataset(seeds, data_dir="data", cache_dir="data/cache"):
+def load_hybrid_dataset(seeds, data_dir="data/data", cache_dir="data/cache"):
     """
     Loads both physical multiscale features and kinematic baseline features for a set of seeds,
     and concatenates them into a hybrid feature matrix.
